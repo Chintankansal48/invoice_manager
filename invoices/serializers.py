@@ -6,12 +6,33 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
         model = InvoiceDetail
         fields = ['id', 'description', 'quantity', 'price', 'line_total']
 
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantity must be greater than zero.")
+        return value
+
+    def validate_price(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Price must be greater than zero.")
+        return value
+
+    def validate(self, data):
+        expected_total = data['quantity'] * data['price']
+        if data['line_total'] != expected_total:
+            raise serializers.ValidationError("Line total must be equal to quantity * price.")
+        return data
+
 class InvoiceSerializer(serializers.ModelSerializer):
     details = InvoiceDetailSerializer(many=True)
 
     class Meta:
         model = Invoice
         fields = ['id', 'invoice_number', 'customer_name', 'date', 'details']
+
+    def validate_details(self, value):
+        if not value:
+            raise serializers.ValidationError("An invoice must have at least one detail entry.")
+        return value
 
     def create(self, validated_data):
         details_data = validated_data.pop('details')
